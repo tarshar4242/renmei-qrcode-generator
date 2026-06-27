@@ -192,6 +192,35 @@
       padding: 8px;
     }
 
+    .qr-logo-badge {
+      position: absolute;
+      inset: 50% auto auto 50%;
+      width: 74px;
+      height: 74px;
+      transform: translate(-50%, -50%);
+      border-radius: 18px;
+      background: #ffffff;
+      box-shadow: 0 12px 28px rgba(182, 90, 46, 0.18);
+      padding: 8px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    .qr-logo-badge.is-visible {
+      display: flex;
+    }
+
+    .qr-logo-badge img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 12px;
+      display: block;
+    }
+
     .placeholder {
       color: var(--muted);
       font-size: 14px;
@@ -265,6 +294,9 @@
         </noscript>
         <div id="qrcode-frame">
           <div class="placeholder">在左側輸入網址後，這裡會即時顯示 QRCode。</div>
+          <div id="qr-logo-badge" class="qr-logo-badge" aria-hidden="true">
+            <img src="./logo-source.jpg" alt="">
+          </div>
         </div>
         <strong>預覽</strong>
         <div id="url-preview" class="url-preview"></div>
@@ -282,6 +314,7 @@
     const clearBtn = document.getElementById("clear-btn");
     const status = document.getElementById("status");
     const urlPreview = document.getElementById("url-preview");
+    const logoBadge = document.getElementById("qr-logo-badge");
     const logoImage = new Image();
     logoImage.src = "./logo-source.jpg";
 
@@ -305,6 +338,8 @@
 
     function showPlaceholder(message) {
       frame.innerHTML = '<div class="placeholder">' + message + "</div>";
+      frame.appendChild(logoBadge);
+      logoBadge.classList.remove("is-visible");
       downloadBtn.disabled = true;
     }
 
@@ -359,6 +394,21 @@
       return addLogoToCanvas(canvas);
     }
 
+    function hasRenderedQr() {
+      return Boolean(frame.querySelector("canvas") || frame.querySelector("img"));
+    }
+
+    function showLogoBadge() {
+      frame.appendChild(logoBadge);
+      if (logoImage.complete && hasRenderedQr()) {
+        logoBadge.classList.add("is-visible");
+      }
+    }
+
+    function hideLogoBadge() {
+      logoBadge.classList.remove("is-visible");
+    }
+
     function renderQr() {
       const normalized = normalizeUrl(input.value);
 
@@ -395,12 +445,13 @@
         colorLight: "#ffffff",
         correctLevel: QRCode.CorrectLevel.H
       });
+      showLogoBadge();
 
       urlPreview.textContent = normalized;
       if (applyLogoToCurrentQr()) {
         status.textContent = "QRCode 已更新，中央 Logo 已套用，可以直接下載。";
       } else {
-        status.textContent = "QRCode 已更新，可以直接下載。";
+        status.textContent = "QRCode 已更新，畫面中央 Logo 已顯示，可以直接下載。";
       }
       downloadBtn.disabled = false;
     }
@@ -432,6 +483,7 @@
           exportCanvas.height = tempImage.height;
           const ctx = exportCanvas.getContext("2d");
           ctx.drawImage(tempImage, 0, 0);
+          addLogoToCanvas(exportCanvas);
           const link = document.createElement("a");
           link.href = exportCanvas.toDataURL("image/png");
           link.download = "qrcode.png";
@@ -451,7 +503,10 @@
     });
 
     logoImage.addEventListener("load", () => {
-      applyLogoToCurrentQr();
+      if (hasRenderedQr()) {
+        showLogoBadge();
+        applyLogoToCurrentQr();
+      }
     });
 
     renderQr();
