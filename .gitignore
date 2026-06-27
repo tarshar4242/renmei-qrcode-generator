@@ -1,0 +1,7 @@
+.DS_Store
+
+# Project output to keep the repo lightweight
+downloads/
+frames/
+analysis/
+RITA_打神告廟_AI生成資料包/

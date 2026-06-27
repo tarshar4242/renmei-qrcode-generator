@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QRCode 產生器</title>
+  <style>
+    :root {
+      --bg: #f6f1e8;
+      --panel: rgba(255, 252, 247, 0.88);
+      --panel-border: rgba(109, 78, 52, 0.18);
+      --text: #2d241d;
+      --muted: #786554;
+      --accent: #b65a2e;
+      --accent-dark: #8f421e;
+      --shadow: 0 24px 60px rgba(74, 47, 28, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Avenir Next", "PingFang TC", "Noto Sans TC", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(245, 202, 146, 0.55), transparent 34%),
+        radial-gradient(circle at bottom right, rgba(190, 121, 76, 0.26), transparent 28%),
+        linear-gradient(135deg, #f4eee4 0%, #efe3d2 52%, #ead9c6 100%);
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .shell {
+      width: min(980px, 100%);
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: 28px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+    }
+
+    .panel {
+      padding: 32px;
+    }
+
+    .panel-left {
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0)),
+        linear-gradient(135deg, rgba(255, 248, 240, 0.92), rgba(246, 234, 219, 0.74));
+      border-right: 1px solid var(--panel-border);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(182, 90, 46, 0.1);
+      color: var(--accent-dark);
+      font-size: 13px;
+      letter-spacing: 0.08em;
+    }
+
+    h1 {
+      margin: 18px 0 12px;
+      font-size: clamp(2rem, 4vw, 3.4rem);
+      line-height: 1.05;
+      letter-spacing: -0.04em;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.75;
+    }
+
+    .form {
+      margin-top: 28px;
+      display: grid;
+      gap: 16px;
+    }
+
+    label {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    input[type="url"] {
+      width: 100%;
+      padding: 16px 18px;
+      border: 1px solid rgba(126, 97, 72, 0.22);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.72);
+      font-size: 16px;
+      color: var(--text);
+      outline: none;
+      transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+    }
+
+    input[type="url"]:focus {
+      border-color: rgba(182, 90, 46, 0.48);
+      box-shadow: 0 0 0 4px rgba(182, 90, 46, 0.12);
+      transform: translateY(-1px);
+    }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    button,
+    a.button {
+      appearance: none;
+      border: 0;
+      border-radius: 16px;
+      padding: 14px 18px;
+      font: inherit;
+      text-decoration: none;
+      cursor: pointer;
+      transition: transform 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
+    }
+
+    button:hover,
+    a.button:hover {
+      transform: translateY(-2px);
+    }
+
+    .primary {
+      background: linear-gradient(135deg, var(--accent), #cf7a41);
+      color: #fffaf5;
+      box-shadow: 0 14px 28px rgba(182, 90, 46, 0.24);
+    }
+
+    .ghost {
+      background: rgba(255, 255, 255, 0.72);
+      color: var(--text);
+      border: 1px solid rgba(126, 97, 72, 0.18);
+    }
+
+    .hint {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .panel-right {
+      display: grid;
+      place-items: center;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.04)),
+        linear-gradient(135deg, rgba(255, 249, 244, 0.95), rgba(239, 226, 209, 0.92));
+    }
+
+    .preview-card {
+      width: min(360px, 100%);
+      text-align: center;
+      padding: 28px;
+      border-radius: 28px;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(126, 97, 72, 0.14);
+      box-shadow: 0 18px 36px rgba(88, 56, 34, 0.08);
+    }
+
+    #qrcode-frame {
+      width: 260px;
+      height: 260px;
+      margin: 0 auto 18px;
+      border-radius: 24px;
+      background:
+        linear-gradient(135deg, rgba(245, 236, 228, 0.9), rgba(255, 255, 255, 0.95));
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #qrcode-frame canvas,
+    #qrcode-frame img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 12px;
+      background: #fff;
+      padding: 8px;
+    }
+
+    .placeholder {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+      padding: 0 16px;
+    }
+
+    .url-preview {
+      margin-top: 10px;
+      font-size: 13px;
+      color: var(--muted);
+      word-break: break-all;
+      min-height: 40px;
+    }
+
+    .status {
+      margin-top: 12px;
+      font-size: 14px;
+      min-height: 24px;
+      color: var(--accent-dark);
+    }
+
+    @media (max-width: 840px) {
+      .shell {
+        grid-template-columns: 1fr;
+      }
+
+      .panel-left {
+        border-right: 0;
+        border-bottom: 1px solid var(--panel-border);
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="panel panel-left">
+      <div class="eyebrow">QRCode Generator</div>
+      <h1>輸入網址，立即生成可下載的 QRCode</h1>
+      <p>貼上網址後會即時更新 QRCode。產生完成後可一鍵下載成 PNG，適合放到海報、簡報或分享頁面。</p>
+
+      <div class="form">
+        <div>
+          <label for="url-input">網址</label>
+          <input
+            id="url-input"
+            type="url"
+            inputmode="url"
+            placeholder="https://example.com"
+            autocomplete="off"
+            spellcheck="false"
+          >
+        </div>
+
+        <div class="actions">
+          <button id="download-btn" class="primary" type="button" disabled>下載 PNG</button>
+          <button id="clear-btn" class="ghost" type="button">清空</button>
+        </div>
+
+        <div class="hint">支援即時更新。若未輸入 `http://` 或 `https://`，系統會自動補上 `https://`。</div>
+      </div>
+    </section>
+
+    <section class="panel panel-right">
+      <div class="preview-card">
+        <div id="qrcode-frame">
+          <div class="placeholder">在左側輸入網址後，這裡會即時顯示 QRCode。</div>
+        </div>
+        <strong>預覽</strong>
+        <div id="url-preview" class="url-preview"></div>
+        <div id="status" class="status"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script>
+    const input = document.getElementById("url-input");
+    const frame = document.getElementById("qrcode-frame");
+    const downloadBtn = document.getElementById("download-btn");
+    const clearBtn = document.getElementById("clear-btn");
+    const status = document.getElementById("status");
+    const urlPreview = document.getElementById("url-preview");
+
+    let qrCode = null;
+    let lastValue = "";
+
+    function normalizeUrl(value) {
+      const trimmed = value.trim();
+      if (!trimmed) return "";
+      if (/^https?:\/\//i.test(trimmed)) return trimmed;
+      return "https://" + trimmed;
+    }
+
+    function looksLikeUrl(value) {
+      try {
+        const url = new URL(value);
+        return Boolean(url.hostname);
+      } catch {
+        return false;
+      }
+    }
+
+    function showPlaceholder(message) {
+      frame.innerHTML = '<div class="placeholder">' + message + "</div>";
+      downloadBtn.disabled = true;
+    }
+
+    function renderQr() {
+      const normalized = normalizeUrl(input.value);
+      lastValue = normalized;
+
+      if (!normalized) {
+        urlPreview.textContent = "";
+        status.textContent = "";
+        showPlaceholder("在左側輸入網址後，這裡會即時顯示 QRCode。");
+        qrCode = null;
+        return;
+      }
+
+      if (!looksLikeUrl(normalized)) {
+        urlPreview.textContent = normalized;
+        status.textContent = "這個內容不像是有效網址，請再檢查一次。";
+        showPlaceholder("請輸入有效網址，例如 https://example.com");
+        qrCode = null;
+        return;
+      }
+
+      frame.innerHTML = "";
+      qrCode = new QRCode(frame, {
+        text: normalized,
+        width: 224,
+        height: 224,
+        colorDark: "#1f1712",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+      });
+
+      urlPreview.textContent = normalized;
+      status.textContent = "QRCode 已更新，可以直接下載。";
+      downloadBtn.disabled = false;
+    }
+
+    function downloadQr() {
+      const canvas = frame.querySelector("canvas");
+      const img = frame.querySelector("img");
+
+      if (canvas) {
+        const link = document.createElement("a");
+        link.href = canvas.toDataURL("image/png");
+        link.download = "qrcode.png";
+        link.click();
+        return;
+      }
+
+      if (img && img.src) {
+        const tempImage = new Image();
+        tempImage.crossOrigin = "anonymous";
+        tempImage.onload = () => {
+          const exportCanvas = document.createElement("canvas");
+          exportCanvas.width = tempImage.width;
+          exportCanvas.height = tempImage.height;
+          const ctx = exportCanvas.getContext("2d");
+          ctx.drawImage(tempImage, 0, 0);
+          const link = document.createElement("a");
+          link.href = exportCanvas.toDataURL("image/png");
+          link.download = "qrcode.png";
+          link.click();
+        };
+        tempImage.src = img.src;
+      }
+    }
+
+    input.addEventListener("input", renderQr);
+    downloadBtn.addEventListener("click", downloadQr);
+    clearBtn.addEventListener("click", () => {
+      input.value = "";
+      renderQr();
+      input.focus();
+    });
+
+    renderQr();
+  </script>
+</body>
+</html>
