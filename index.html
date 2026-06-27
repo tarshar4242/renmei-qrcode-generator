@@ -282,6 +282,8 @@
     const clearBtn = document.getElementById("clear-btn");
     const status = document.getElementById("status");
     const urlPreview = document.getElementById("url-preview");
+    const logoImage = new Image();
+    logoImage.src = "./logo-source.jpg";
 
     let qrCode = null;
 
@@ -308,6 +310,53 @@
 
     function isQrLibraryReady() {
       return typeof window.QRCode !== "undefined";
+    }
+
+    function drawRoundedRect(ctx, x, y, width, height, radius) {
+      const safeRadius = Math.min(radius, width / 2, height / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + safeRadius, y);
+      ctx.arcTo(x + width, y, x + width, y + height, safeRadius);
+      ctx.arcTo(x + width, y + height, x, y + height, safeRadius);
+      ctx.arcTo(x, y + height, x, y, safeRadius);
+      ctx.arcTo(x, y, x + width, y, safeRadius);
+      ctx.closePath();
+    }
+
+    function addLogoToCanvas(canvas) {
+      if (!canvas || !logoImage.complete) {
+        return false;
+      }
+
+      const ctx = canvas.getContext("2d");
+      const logoSize = Math.round(canvas.width * 0.24);
+      const padding = Math.round(logoSize * 0.14);
+      const badgeSize = logoSize + padding * 2;
+      const x = Math.round((canvas.width - badgeSize) / 2);
+      const y = Math.round((canvas.height - badgeSize) / 2);
+
+      ctx.save();
+      ctx.shadowColor = "rgba(182, 90, 46, 0.18)";
+      ctx.shadowBlur = 18;
+      ctx.fillStyle = "#ffffff";
+      drawRoundedRect(ctx, x, y, badgeSize, badgeSize, 18);
+      ctx.fill();
+      ctx.restore();
+
+      ctx.save();
+      drawRoundedRect(ctx, x, y, badgeSize, badgeSize, 18);
+      ctx.clip();
+      ctx.drawImage(logoImage, x + padding, y + padding, logoSize, logoSize);
+      ctx.restore();
+      return true;
+    }
+
+    function applyLogoToCurrentQr() {
+      const canvas = frame.querySelector("canvas");
+      if (!canvas) {
+        return false;
+      }
+      return addLogoToCanvas(canvas);
     }
 
     function renderQr() {
@@ -348,7 +397,11 @@
       });
 
       urlPreview.textContent = normalized;
-      status.textContent = "QRCode 已更新，可以直接下載。";
+      if (applyLogoToCurrentQr()) {
+        status.textContent = "QRCode 已更新，中央 Logo 已套用，可以直接下載。";
+      } else {
+        status.textContent = "QRCode 已更新，可以直接下載。";
+      }
       downloadBtn.disabled = false;
     }
 
@@ -362,6 +415,7 @@
       const img = frame.querySelector("img");
 
       if (canvas) {
+        applyLogoToCurrentQr();
         const link = document.createElement("a");
         link.href = canvas.toDataURL("image/png");
         link.download = "qrcode.png";
@@ -394,6 +448,10 @@
       input.value = "";
       renderQr();
       input.focus();
+    });
+
+    logoImage.addEventListener("load", () => {
+      applyLogoToCurrentQr();
     });
 
     renderQr();
