@@ -247,16 +247,22 @@
         </div>
 
         <div class="actions">
+          <button id="preview-btn" class="ghost" type="button">生成預覽</button>
           <button id="download-btn" class="primary" type="button" disabled>下載 PNG</button>
           <button id="clear-btn" class="ghost" type="button">清空</button>
         </div>
 
-        <div class="hint">支援即時更新。若未輸入 `http://` 或 `https://`，系統會自動補上 `https://`。</div>
+        <div class="hint">支援按鈕預覽與即時更新。若未輸入 `http://` 或 `https://`，系統會自動補上 `https://`。</div>
       </div>
     </section>
 
     <section class="panel panel-right">
       <div class="preview-card">
+        <noscript>
+          <div class="status" style="margin-bottom: 14px;">
+            目前這個開啟方式沒有執行 JavaScript。請改用 Safari 開啟線上網頁版本。
+          </div>
+        </noscript>
         <div id="qrcode-frame">
           <div class="placeholder">在左側輸入網址後，這裡會即時顯示 QRCode。</div>
         </div>
@@ -271,13 +277,13 @@
   <script>
     const input = document.getElementById("url-input");
     const frame = document.getElementById("qrcode-frame");
+    const previewBtn = document.getElementById("preview-btn");
     const downloadBtn = document.getElementById("download-btn");
     const clearBtn = document.getElementById("clear-btn");
     const status = document.getElementById("status");
     const urlPreview = document.getElementById("url-preview");
 
     let qrCode = null;
-    let lastValue = "";
 
     function normalizeUrl(value) {
       const trimmed = value.trim();
@@ -300,14 +306,25 @@
       downloadBtn.disabled = true;
     }
 
+    function isQrLibraryReady() {
+      return typeof window.QRCode !== "undefined";
+    }
+
     function renderQr() {
       const normalized = normalizeUrl(input.value);
-      lastValue = normalized;
 
       if (!normalized) {
         urlPreview.textContent = "";
         status.textContent = "";
         showPlaceholder("在左側輸入網址後，這裡會即時顯示 QRCode。");
+        qrCode = null;
+        return;
+      }
+
+      if (!isQrLibraryReady()) {
+        urlPreview.textContent = normalized;
+        status.textContent = "QRCode 模組尚未載入。若你是直接開本機檔案，請先確認目前有連網。";
+        showPlaceholder("QRCode 模組未載入，暫時無法生成預覽。");
         qrCode = null;
         return;
       }
@@ -333,6 +350,11 @@
       urlPreview.textContent = normalized;
       status.textContent = "QRCode 已更新，可以直接下載。";
       downloadBtn.disabled = false;
+    }
+
+    function handlePreviewClick() {
+      renderQr();
+      input.focus();
     }
 
     function downloadQr() {
@@ -366,6 +388,7 @@
     }
 
     input.addEventListener("input", renderQr);
+    previewBtn.addEventListener("click", handlePreviewClick);
     downloadBtn.addEventListener("click", downloadQr);
     clearBtn.addEventListener("click", () => {
       input.value = "";
